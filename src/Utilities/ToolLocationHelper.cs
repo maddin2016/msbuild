@@ -17,6 +17,9 @@ using Microsoft.Win32;
 using FrameworkNameVersioning = System.Runtime.Versioning.FrameworkName;
 using UtilitiesDotNetFrameworkArchitecture = Microsoft.Build.Utilities.DotNetFrameworkArchitecture;
 using SharedDotNetFrameworkArchitecture = Microsoft.Build.Shared.DotNetFrameworkArchitecture;
+using Microsoft.Win32;
+using System.Collections.ObjectModel;
+using Microsoft.Build.Tasks.AssemblyFoldersFromConfig;
 
 namespace Microsoft.Build.Utilities
 {
@@ -70,11 +73,22 @@ namespace Microsoft.Build.Utilities
         /// </summary>
         Version461 = 8,
 
+        /// <summary>
+        /// version 4.5.2. Enum is out of order because it was shipped out of band from a Visual Studio update
+        /// without a corresponding SDK release.
+        /// </summary>
+        Version452 = 9,
+
+        /// <summary>
+        /// version 4.6.2
+        /// </summary>
+        Version462 = 10,
+
         // keep this up to date, this should always point to the last entry
         /// <summary>
         /// the latest version available at the time of release
         /// </summary>
-        VersionLatest = Version461
+        VersionLatest = Version462
     }
 
     /// <summary>
@@ -235,15 +249,15 @@ namespace Microsoft.Build.Utilities
         /// <summary>
         /// Get a sorted list of AssemblyFoldersExInfo which contain information about what directories the 3rd party assemblies are registered under for use during build and design time.
         /// 
-        /// This method will enumerate the AssemblyFoldersEx regisry location and return a list of AssemblyFoldersExInfo in the same order in which 
+        /// This method will enumerate the AssemblyFoldersEx registry location and return a list of AssemblyFoldersExInfo in the same order in which
         /// they will be searched during both design and build time for reference assemblies.
         /// </summary>
         /// <param name="registryRoot">The root registry location for the targeted framework. For .NET this is SOFTWARE\MICROSOFT\.NETFramework</param>
-        /// <param name="targetFrameworkVersion">The targeted framework version (2.0, 3.0, 3.5, 4.0, ect)</param>
+        /// <param name="targetFrameworkVersion">The targeted framework version (2.0, 3.0, 3.5, 4.0, etc)</param>
         /// <param name="registryKeySuffix">The name of the folder (AssemblyFoldersEx) could also be PocketPC\AssemblyFoldersEx, or others</param>
         /// <param name="osVersion">Components may declare Min and Max OSVersions in the registry this value can be used filter directories returned based on whether or not the osversion is bounded by the Min  and Max versions declared by the component. If this value is blank or null no filtering is done</param>
         /// <param name="platform">Components may declare platform guids in the registry this can be used to return only directories which have a certain platform guid. If this value is blank or null no filtering is done</param>
-        /// <param name="targetProcessorArchitecture">What processor architecture is being targetd. This determines which registry hives are searched in what order. 
+        /// <param name="targetProcessorArchitecture">What processor architecture is being targeted. This determines which registry hives are searched in what order.
         /// On a 64 bit operating system we do the following
         ///         If you are targeting 64 bit (target x64 or ia64)
         ///             Add in the 64 bit hive first
@@ -268,6 +282,35 @@ namespace Microsoft.Build.Utilities
             return assemblyFolders;
         }
 #endif
+
+        /// <summary>
+        /// Get a sorted list of AssemblyFoldersFromConfigInfo which contain information about what directories the 3rd party assemblies are registered under for use during build and design time.
+        ///
+        /// This method will read the specified configuration file and enumerate the and return a list of AssemblyFoldersFromConfigInfo in the same order in which
+        /// they will be searched during both design and build time for reference assemblies.
+        /// </summary>
+        /// <param name="configFile">Full path to the Assembly Folders config file.</param>
+        /// <param name="targetFrameworkVersion">The targeted framework version (2.0, 3.0, 3.5, 4.0, etc).</param>
+        /// <param name="targetProcessorArchitecture">What processor architecture is being targeted. This determines which registry hives are searched in what order.
+        /// On a 64 bit operating system we do the following
+        ///         If you are targeting 64 bit (target x64 or ia64)
+        ///             Add in the 64 bit assembly folders first
+        ///             Add in the 32 bit assembly folders second
+        ///         If you are not targeting a 64 bit
+        ///            Add in the 32 bit assembly folders first
+        ///            Add in the 64 bit assembly folders second
+        /// On a 32 bit machine we only add in the 32 bit assembly folders.
+        /// </param>
+        /// <returns>List of AssemblyFoldersFromConfigInfo</returns>
+        public static IList<AssemblyFoldersFromConfigInfo> GetAssemblyFoldersFromConfigInfo(string configFile, string targetFrameworkVersion, System.Reflection.ProcessorArchitecture targetProcessorArchitecture)
+        {
+            ErrorUtilities.VerifyThrowArgumentLength(configFile, nameof(configFile));
+            ErrorUtilities.VerifyThrowArgumentLength(targetFrameworkVersion, nameof(targetFrameworkVersion));
+
+            var assemblyFoldersInfos = new AssemblyFoldersFromConfig(configFile, targetFrameworkVersion, targetProcessorArchitecture);
+
+            return assemblyFoldersInfos.ToList();
+        }
 
         /// <summary>
         /// Get a list of SDK's installed on the machine for a given target platform
@@ -819,13 +862,8 @@ namespace Microsoft.Build.Utilities
                     ErrorUtilities.DebugTraceMessage("GetPlatformSDKPropsFileLocation", "Could not find root SDK location for SDKI = '{0}', SDKV = '{1}'", sdkIdentifier, sdkVersion);
                 }
             }
-            catch (Exception e)
+            catch (Exception e) when (ExceptionHandling.IsIoRelatedException(e))
             {
-                if (!ExceptionHandling.IsIoRelatedException(e))
-                {
-                    throw;
-                }
-
                 ErrorUtilities.DebugTraceMessage("GetPlatformSDKPropsFileLocation", "Encountered exception trying to get the SDK props file Location : {0}", e.Message);
             }
 
@@ -1009,13 +1047,8 @@ namespace Microsoft.Build.Utilities
                     }
                 }
             }
-            catch (Exception e)
+            catch (Exception e) when (ExceptionHandling.IsIoRelatedException(e))
             {
-                if (!ExceptionHandling.IsIoRelatedException(e))
-                {
-                    throw;
-                }
-
                 ErrorUtilities.DebugTraceMessage("GetLegacyTargetPlatformReferences", "Encountered exception trying to gather the platform references: {0}", e.Message);
             }
 
@@ -1074,13 +1107,8 @@ namespace Microsoft.Build.Utilities
                     }
                 }
             }
-            catch (Exception e)
+            catch (Exception e) when (ExceptionHandling.IsIoRelatedException(e))
             {
-                if (!ExceptionHandling.IsIoRelatedException(e))
-                {
-                    throw;
-                }
-
                 ErrorUtilities.DebugTraceMessage("GetTargetPlatformReferences", "Encountered exception trying to gather the platform references: {0}", e.Message);
             }
 
@@ -1591,6 +1619,21 @@ namespace Microsoft.Build.Utilities
         /// <returns>Collection of reference assembly locations.</returns>
         public static string GetPathToStandardLibraries(string targetFrameworkIdentifier, string targetFrameworkVersion, string targetFrameworkProfile, string platformTarget)
         {
+            return GetPathToStandardLibraries(targetFrameworkIdentifier, targetFrameworkVersion, targetFrameworkProfile, platformTarget, null);
+        }
+
+        /// <summary>
+        /// Returns the path to mscorlib and system.dll
+        /// </summary>
+        /// <param name="targetFrameworkIdentifier">Identifier being targeted</param>
+        /// <param name="targetFrameworkVersion">Version being targeted</param>
+        /// <param name="targetFrameworkProfile">Profile being targeted</param>
+        /// <param name="platformTarget">What is the targeted platform, this is used to determine where we should look for the standard libraries. Note, this parameter is only used for .net frameworks less than 4.0</param>
+        /// <param name="targetFrameworkRootPath">Root directory where the target framework will be looked for. Uses default path if this is null</param>
+        /// <exception cref="ArgumentNullException">When the frameworkName is null</exception>
+        /// <returns>Collection of reference assembly locations.</returns>
+        public static string GetPathToStandardLibraries(string targetFrameworkIdentifier, string targetFrameworkVersion, string targetFrameworkProfile, string platformTarget, string targetFrameworkRootPath)
+        {
             ErrorUtilities.VerifyThrowArgumentLength(targetFrameworkIdentifier, "targetFrameworkIdentifier");
             ErrorUtilities.VerifyThrowArgumentLength(targetFrameworkVersion, "targetFrameworkVersion");
 
@@ -1626,7 +1669,7 @@ namespace Microsoft.Build.Utilities
                 // location, if so then we can just use what ever version they passed in because it should be MSIL now and not bit specific.
             }
 
-            IList<string> referenceAssemblyDirectories = GetPathToReferenceAssemblies(targetFrameworkIdentifier, targetFrameworkVersion, targetFrameworkProfile);
+            IList<string> referenceAssemblyDirectories = GetPathToReferenceAssemblies(targetFrameworkIdentifier, targetFrameworkVersion, targetFrameworkProfile, targetFrameworkRootPath);
             // Check each returned reference assembly directory for one containing mscorlib.dll
             // When we find it (most of the time it will be the first in the set) we'll
             // return that directory.
@@ -1657,13 +1700,35 @@ namespace Microsoft.Build.Utilities
         /// <returns>Collection of reference assembly locations.</returns>
         public static IList<String> GetPathToReferenceAssemblies(string targetFrameworkIdentifier, string targetFrameworkVersion, string targetFrameworkProfile)
         {
+            return GetPathToReferenceAssemblies(targetFrameworkIdentifier, targetFrameworkVersion, targetFrameworkProfile, null);
+        }
+
+        /// <summary>
+        /// Returns the paths to the reference assemblies location for the given target framework.
+        /// This method will assume the requested ReferenceAssemblyRoot path will be the ProgramFiles directory specified by Environment.SpecialFolder.ProgramFiles
+        /// In additon when the .NETFramework or .NET Framework targetFrameworkIdentifiers are seen and targetFrameworkVersion is 2.0, 3.0, 3.5 or 4.0 we will return the correctly chained reference assembly paths
+        /// for the legacy .net frameworks. This chaining will use the existing GetPathToDotNetFrameworkReferenceAssemblies to build up the list of reference assembly paths.
+        /// </summary>
+        /// <param name="targetFrameworkIdentifier">Identifier being targeted</param>
+        /// <param name="targetFrameworkVersion">Version being targeted</param>
+        /// <param name="targetFrameworkProfile">Profile being targeted</param>
+        /// <param name="targetFrameworkRootPath">Root directory which will be used to calculate the reference assembly path. The references assemblies will be
+        /// generated in the following way TargetFrameworkRootPath\TargetFrameworkIdentifier\TargetFrameworkVersion\SubType\TargetFrameworkSubType.
+        /// Uses the default path if this is null.
+        /// </param>
+        /// <exception cref="ArgumentNullException">When the frameworkName is null</exception>
+        /// <returns>Collection of reference assembly locations.</returns>
+        public static IList<String> GetPathToReferenceAssemblies(string targetFrameworkIdentifier, string targetFrameworkVersion, string targetFrameworkProfile, string targetFrameworkRootPath)
+        {
             ErrorUtilities.VerifyThrowArgumentLength(targetFrameworkVersion, "targetFrameworkVersion");
             ErrorUtilities.VerifyThrowArgumentLength(targetFrameworkIdentifier, "targetFrameworkIdentifier");
             ErrorUtilities.VerifyThrowArgumentNull(targetFrameworkProfile, "targetFrameworkProfile");
 
             Version frameworkVersion = ConvertTargetFrameworkVersionToVersion(targetFrameworkVersion);
             FrameworkNameVersioning targetFrameworkName = new FrameworkNameVersioning(targetFrameworkIdentifier, frameworkVersion, targetFrameworkProfile);
-            return GetPathToReferenceAssemblies(targetFrameworkName);
+            return String.IsNullOrEmpty(targetFrameworkRootPath)
+                        ? GetPathToReferenceAssemblies(targetFrameworkName)
+                        : GetPathToReferenceAssemblies(targetFrameworkRootPath, targetFrameworkName);
         }
 
 
@@ -1781,11 +1846,17 @@ namespace Microsoft.Build.Utilities
                 case TargetDotNetFrameworkVersion.Version451:
                     return FrameworkLocationHelper.dotNetFrameworkVersion451;
 
+                case TargetDotNetFrameworkVersion.Version452:
+                    return FrameworkLocationHelper.dotNetFrameworkVersion452;
+
                 case TargetDotNetFrameworkVersion.Version46:
                     return FrameworkLocationHelper.dotNetFrameworkVersion46;
 
                 case TargetDotNetFrameworkVersion.Version461:
                     return FrameworkLocationHelper.dotNetFrameworkVersion461;
+
+                case TargetDotNetFrameworkVersion.Version462:
+                    return FrameworkLocationHelper.dotNetFrameworkVersion462;
 
                 default:
                     ErrorUtilities.ThrowArgument("ToolLocationHelper.UnsupportedFrameworkVersion", version);
@@ -2851,13 +2922,8 @@ namespace Microsoft.Build.Utilities
                     }
                 }
             }
-            catch (Exception e)
+            catch (Exception e) when (ExceptionHandling.IsIoRelatedException(e))
             {
-                if (!ExceptionHandling.IsIoRelatedException(e))
-                {
-                    throw;
-                }
-
                 ErrorUtilities.DebugTraceMessage("GatherPlatformsForSdk", "Encountered exception trying to gather platform-specific data: {0}", e.Message);
             }
         }
@@ -2962,13 +3028,8 @@ namespace Microsoft.Build.Utilities
             {
                 ErrorUtilities.ThrowInvalidOperation("ToolsLocationHelper.InvalidRedistFile", redistFile, ex.Message);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ExceptionHandling.IsIoRelatedException(ex))
             {
-                // If there was a problem writing the file (like it's read-only or locked on disk, for
-                // example), then eat the exception and log a warning.  Otherwise, rethrow.
-                if (ExceptionHandling.NotExpectedException(ex))
-                    throw;
-
                 ErrorUtilities.ThrowInvalidOperation("ToolsLocationHelper.InvalidRedistFile", redistFile, ex.Message);
             }
 

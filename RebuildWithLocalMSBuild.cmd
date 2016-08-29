@@ -1,6 +1,6 @@
 :: This script will:
-::   1) Rebuild MSBuild source tree.
-::   2) Create a copy of the build output in bin\MSBuild
+::   1) Rebuild MSBuild source tree (x86 only).
+::   2) Create a "bootstrapped" copy of the build output in bin\MSBuild.
 ::   3) Build the source tree again with the MSBuild.exe in step 2.
 
 @echo off
@@ -9,7 +9,7 @@ setlocal
 :: Restore build tools
 call %~dp0init-tools.cmd
 
-set RUNTIME_HOST=%~dp0Tools\CoreRun.exe
+set RUNTIME_HOST=%~dp0Tools\dotnetcli\dotnet.exe
 
 :: build MSBuild with the MSBuild binaries from BuildTools
 set MSBUILDLOGPATH=%~dp0msbuild_bootstrap_build.log
@@ -18,7 +18,7 @@ set MSBUILD_CUSTOM_PATH=%~dp0Tools\MSBuild.exe
 echo.
 echo ** Rebuilding MSBuild with binaries from BuildTools
 
-call "%~dp0build.cmd" /t:Rebuild /p:Configuration=Debug-NetCore
+call "%~dp0build.cmd" /t:Rebuild /p:Configuration=Debug-NetCore /p:"OverrideToolHost=%RUNTIME_HOST%"
 
 if %ERRORLEVEL% NEQ 0 (
     echo.

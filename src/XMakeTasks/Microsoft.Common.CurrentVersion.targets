@@ -78,7 +78,7 @@ Copyright (C) Microsoft Corporation. All rights reserved.
     <!-- The FrameworkPathOverride is required for the inproc visual basic compiler to initialize when targeting target frameworks less than 4.0. If .net 2.0 is not installed then the property value above will not provide the location
              of mscorlib. This is also true if the build author overrides this property to some other directory which does not contain mscorlib.dll. In the case we cannot find mscorlib.dll at the correct location
              we need to find a directory which does contain mscorlib to allow the inproc compiler to initialize and give us the chance to show certain dialogs in the IDE (which only happen after initialization).-->
-    <FrameworkPathOverride Condition="'$(FrameworkPathOverride)' == ''">$([Microsoft.Build.Utilities.ToolLocationHelper]::GetPathToStandardLibraries($(TargetFrameworkIdentifier), $(TargetFrameworkVersion), $(TargetFrameworkProfile), $(PlatformTarget)))</FrameworkPathOverride>
+    <FrameworkPathOverride Condition="'$(FrameworkPathOverride)' == ''">$([Microsoft.Build.Utilities.ToolLocationHelper]::GetPathToStandardLibraries($(TargetFrameworkIdentifier), $(TargetFrameworkVersion), $(TargetFrameworkProfile), $(PlatformTarget), $(TargetFrameworkRootPath)))</FrameworkPathOverride>
     <FrameworkPathOverride Condition="!Exists('$(FrameworkPathOverride)\mscorlib.dll')">$(MSBuildFrameworkToolsPath)</FrameworkPathOverride>
   </PropertyGroup>
 
@@ -147,6 +147,7 @@ Copyright (C) Microsoft Corporation. All rights reserved.
     <_DebugSymbolsProduced Condition="'$(DebugType)'=='pdbonly'">true</_DebugSymbolsProduced>
     <_DebugSymbolsProduced Condition="'$(DebugType)'=='full'">true</_DebugSymbolsProduced>
     <_DebugSymbolsProduced Condition="'$(DebugType)'=='portable'">true</_DebugSymbolsProduced>
+    <_DebugSymbolsProduced Condition="'$(DebugType)'=='embedded'">false</_DebugSymbolsProduced>
 
     <!-- Whether or not a .xml file is produced. -->
     <_DocumentationFileProduced>true</_DocumentationFileProduced>
@@ -527,6 +528,8 @@ Copyright (C) Microsoft Corporation. All rights reserved.
     <AssemblyFoldersSuffix Condition=" '$(AssemblyFoldersSuffix)' == '' ">AssemblyFoldersEx</AssemblyFoldersSuffix>
     <FrameworkRegistryBase Condition=" '$(FrameworkRegistryBase)' == '' ">Software\Microsoft\$(TargetFrameworkIdentifier)</FrameworkRegistryBase>
     <TargetPlatformRegistryBase Condition="'$(TargetPlatformRegistryBase)' == ''">Software\Microsoft\Microsoft SDKs\$(TargetPlatformIdentifier)</TargetPlatformRegistryBase>
+    <AssemblyFoldersConfigFile Condition="'$(AssemblyFoldersConfigFile)' == ''">$(MSBuildToolsPath)\AssemblyFolders.config</AssemblyFoldersConfigFile>
+    <AssemblyFoldersConfigFileSearchPath Condition="Exists('$(AssemblyFoldersConfigFile)')">{AssemblyFoldersFromConfig:$(AssemblyFoldersConfigFile),$(TargetFrameworkVersion)};</AssemblyFoldersConfigFileSearchPath>
     <!--
         The SearchPaths property is set to find assemblies in the following order:
 
@@ -536,10 +539,11 @@ Copyright (C) Microsoft Corporation. All rights reserved.
             (4) The directory of MSBuild's "target" runtime from GetFrameworkPath.
                 The "target" runtime folder is the folder of the runtime that MSBuild is a part of.
             (5) Registered assembly folders, indicated by {Registry:*,*,*}
-            (6) Legacy registered assembly folders, indicated by {AssemblyFolders}
-            (7) Resolve to the GAC.
-            (8) Treat the reference's Include as if it were a real file name.
-            (9) Look in the application's output folder (like bin\debug)
+            (6) Assembly folders from AssemblyFolders.config file (provided by Visual Studio Dev15+).
+            (7) Legacy registered assembly folders, indicated by {AssemblyFolders}
+            (8) Resolve to the GAC.
+            (9) Treat the reference's Include as if it were a real file name.
+            (10) Look in the application's output folder (like bin\debug)
         -->
     <AssemblySearchPaths Condition=" '$(AssemblySearchPaths)' == ''">
       {CandidateAssemblyFiles};
@@ -547,6 +551,7 @@ Copyright (C) Microsoft Corporation. All rights reserved.
       {HintPathFromItem};
       {TargetFrameworkDirectory};
       {Registry:$(FrameworkRegistryBase),$(TargetFrameworkVersion),$(AssemblyFoldersSuffix)$(AssemblyFoldersExConditions)};
+      $(AssemblyFoldersConfigFileSearchPath)
       {AssemblyFolders};
       {GAC};
       {RawFileName};

@@ -1,13 +1,21 @@
 # Microsoft.Build (MSBuild)
 The Microsoft Build Engine is a platform for building applications. This engine, which is also known as MSBuild, provides an XML schema for a project file that controls how the build platform processes and builds software. Visual Studio uses MSBuild, but MSBuild *does not* depend on Visual Studio. By invoking msbuild.exe on your project or solution file, you can orchestrate and build products in environments where Visual Studio isn't installed.
 
-For more information on MSBuild, see the [MSDN documentation](https://msdn.microsoft.com/en-us/library/dd393574(v=vs.120).aspx).
+For more information on MSBuild, see the [MSDN documentation](https://msdn.microsoft.com/en-us/library/dd393574%28v=vs.140%29.aspx).
 
 ### Build Status
-| Configuration | Windows | Ubuntu |Mac OS X|
+Full framework build from `master` (stable, inserted into Visual Studio builds):
+[![Build Status](http://dotnet-ci.cloudapp.net/job/Microsoft_msbuild/job/innerloop_master_Windows_NT_Desktop/badge/icon)](http://dotnet-ci.cloudapp.net/buildStatus/icon?job=Microsoft_msbuild/innerloop_master_Windows_NT_Desktop)
+
+The `xplat` branch is soon to be merged back upstream. Follow the [The Great Merge](https://github.com/Microsoft/msbuild/milestone/6) milestone for progress.
+
+| Runtime\OS | Windows | Ubuntu |Mac OS X|
 |:------|:------:|:------:|:------:|
-| **Full Framework (master)** | [![Build Status](http://dotnet-ci.cloudapp.net/job/Microsoft_msbuild/job/innerloop_master_Windows_NT/badge/icon)](http://dotnet-ci.cloudapp.net/job/Microsoft_msbuild/job/innerloop_master_Windows_NT/) | N/A | N/A |
-|**.NET Core (xplat)**|[![Build Status](http://dotnet-ci.cloudapp.net/job/Microsoft_msbuild/job/innerloop_xplat_Windows_NT/badge/icon)](http://dotnet-ci.cloudapp.net/job/Microsoft_msbuild/job/innerloop_xplat_Windows_NT/)|[![Build Status](http://dotnet-ci.cloudapp.net/job/Microsoft_msbuild/job/innerloop_xplat_Ubuntu/badge/icon)](http://dotnet-ci.cloudapp.net/job/Microsoft_msbuild/job/innerloop_xplat_Ubuntu/)|[![Build Status](http://dotnet-ci.cloudapp.net/job/Microsoft_msbuild/job/innerloop_xplat_OSX/badge/icon)](http://dotnet-ci.cloudapp.net/job/Microsoft_msbuild/job/innerloop_xplat_OSX/)|
+| **Full Framework** |[![Build Status](http://dotnet-ci.cloudapp.net/buildStatus/icon?job=Microsoft_msbuild/innerloop_xplat_Windows_NT_Desktop)](http://dotnet-ci.cloudapp.net/job/Microsoft_msbuild/job/innerloop_xplat_Windows_NT_Desktop/)| N/A | N/A |
+|**.NET Core**|[![Build Status](http://dotnet-ci.cloudapp.net/buildStatus/icon?job=Microsoft_msbuild/innerloop_xplat_Windows_NT_CoreCLR)](http://dotnet-ci.cloudapp.net/job/Microsoft_msbuild/job/innerloop_xplat_Windows_NT_CoreCLR/)|[![Build Status](http://dotnet-ci.cloudapp.net/buildStatus/icon?job=Microsoft_msbuild/innerloop_xplat_Ubuntu_CoreCLR)](http://dotnet-ci.cloudapp.net/job/Microsoft_msbuild/job/innerloop_xplat_Ubuntu_CoreCLR/)|[![Build Status](http://dotnet-ci.cloudapp.net/buildStatus/icon?job=Microsoft_msbuild/innerloop_xplat_OSX_CoreCLR)](http://dotnet-ci.cloudapp.net/job/Microsoft_msbuild/job/innerloop_xplat_OSX_CoreCLR/)|
+
+[![Join the chat at https://gitter.im/Microsoft/msbuild](https://badges.gitter.im/Microsoft/msbuild.svg)](https://gitter.im/Microsoft/msbuild?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Check out what we're working on using our Waffle board!](https://badge.waffle.io/Microsoft/msbuild.svg?label=In+Progress&title=waffle+board)](http://waffle.io/Microsoft/msbuild)
 
 ### Source code
 
@@ -31,6 +39,8 @@ To get started on **Visual Studio 2015**:
 MSBuild's xplat branch allows MSBuild to be run on Unix Systems. Set-up instructions can be viewed on the wiki:   [Building Testing and Debugging on .Net Core MSBuild](https://github.com/Microsoft/msbuild/wiki/Building-Testing-and-Debugging-on-.Net-Core-MSBuild)
 
 ## How to Engage, Contribute and Provide Feedback
+This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+
 Before you contribute, please read through the contributing and developer guides to get an idea of what kinds of pull requests we will or won't accept.
 
 * [Contributing Guide](https://github.com/Microsoft/msbuild/wiki/Contributing-Code)

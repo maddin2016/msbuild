@@ -131,13 +131,8 @@ namespace Microsoft.Build.Tasks
 
                 File.WriteAllText(OutputFile.ItemSpec, code); // Overwrites file if it already exists (and can be overwritten)
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ExceptionHandling.IsIoRelatedException(ex))
             {
-                if (ExceptionHandling.NotExpectedException(ex))
-                {
-                    throw;
-                }
-
                 Log.LogErrorWithCodeFromResources("WriteCodeFragment.CouldNotWriteOutput", (OutputFile == null) ? String.Empty : OutputFile.ItemSpec, ex.Message);
                 return false;
             }
@@ -300,7 +295,7 @@ namespace Microsoft.Build.Tasks
                     if (AssemblyAttributes == null) return string.Empty; 
 
                     extension = "cs";
-                    code.AppendLine("// " + ResourceUtilities.FormatResourceString("WriteCodeFragment.Comment", DateTime.Now));
+                    code.AppendLine("// " + ResourceUtilities.FormatResourceString("WriteCodeFragment.Comment"));
                     code.AppendLine();
                     code.AppendLine("using System;");
                     code.AppendLine("using System.Reflection;");
@@ -311,7 +306,7 @@ namespace Microsoft.Build.Tasks
                         string args = GetAttributeArguments(attributeItem, "=");
                         if (args == null) return null;
 
-                        code.AppendLine(string.Format($"[assembly: {attributeItem.ItemSpec}({args})];"));
+                        code.AppendLine(string.Format($"[assembly: {attributeItem.ItemSpec}({args})]"));
                         haveGeneratedContent = true;
                     }
 

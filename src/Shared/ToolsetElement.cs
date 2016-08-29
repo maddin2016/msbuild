@@ -68,12 +68,8 @@ namespace Microsoft.Build.Evaluation
                             File.Delete(tempFileName + ".config");
                             File.Delete(tempFileName);
                         }
-                        catch (Exception ex)
+                        catch (Exception ex) when (ExceptionHandling.IsIoRelatedException(ex))
                         {
-                            if (ExceptionHandling.NotExpectedException(ex))
-                            {
-                                throw;
-                            }
                         }
                     }
                 }
@@ -96,17 +92,11 @@ namespace Microsoft.Build.Evaluation
 
             try
             {
-                var configFile = FileUtilities.CurrentExecutableConfigurationFilePath;
+                var configFile = BuildEnvironmentHelper.Instance.CurrentMSBuildConfigurationFile;
                 result = File.Exists(configFile) && File.ReadAllText(configFile).Contains("toolsVersion");
             }
-            catch (Exception e)
+            catch (Exception e) when (ExceptionHandling.IsIoRelatedException(e))
             {
-                if (ExceptionHandling.NotExpectedException(e))
-                {
-                    // Catching Exception, but rethrowing unless it's an IO related exception.
-                    throw;
-                }
-
                 // There was some problem reading the config file: let the configuration reader
                 // encounter it
                 result = true;

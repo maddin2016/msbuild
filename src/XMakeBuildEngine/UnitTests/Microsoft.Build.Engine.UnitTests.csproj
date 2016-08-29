@@ -1,6 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="..\..\dir.props"/>
+  <Import Project="..\..\dir.props" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -17,7 +17,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'" />
-    <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug-MONO|AnyCPU'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug-MONO|AnyCPU'" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release-MONO|AnyCPU'" />
   <ItemGroup>
     <Compile Include="..\..\Shared\FxCopExclusions\Microsoft.Build.Shared.Suppressions.cs">
@@ -58,6 +58,9 @@
       <ExcludeFromStyleCop>true</ExcludeFromStyleCop>
     </Compile>
     <Compile Include="..\..\Shared\UnitTests\TypeLoader_Tests.cs">
+      <ExcludeFromStyleCop>true</ExcludeFromStyleCop>
+    </Compile>
+    <Compile Include="..\..\Shared\UnitTests\TypeLoader_Dependencies_Tests.cs">
       <ExcludeFromStyleCop>true</ExcludeFromStyleCop>
     </Compile>
     <Compile Include="..\..\Shared\UnitTests\XmakeAttributes_Tests.cs">
@@ -122,6 +125,7 @@
     <Compile Include="BackEnd\TargetEntry_Tests.cs" />
     <Compile Include="BackEnd\TargetResult_Tests.cs" />
     <Compile Include="BackEnd\TargetUpToDateChecker_Tests.cs" />
+    <Compile Include="BuildEnvironmentHelper_Tests.cs" />
     <Compile Include="Definition\Project_Internal_Tests.cs" />
     <Compile Include="BackEnd\TaskBuilder_Tests.cs" />
     <Compile Include="BackEnd\TaskItemComparer.cs" />
@@ -146,6 +150,7 @@
     <Compile Include="Definition\Toolset_Tests.cs" />
     <Compile Include="Definition\ToolsVersion_Tests.cs" />
     <Compile Include="EscapingInProjects_Tests.cs" />
+    <Compile Include="Evaluation\ItemEvaluation_Tests.cs" />
     <Compile Include="Evaluation\Evaluator_Tests.cs" />
     <Compile Include="Evaluation\Expander_Tests.cs" />
     <Compile Include="Evaluation\ExpressionShredder_Tests.cs" />
@@ -226,5 +231,5 @@
   <ItemGroup>
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
-  <Import Project="..\..\dir.targets"/>
+  <Import Project="..\..\dir.targets" />
 </Project>

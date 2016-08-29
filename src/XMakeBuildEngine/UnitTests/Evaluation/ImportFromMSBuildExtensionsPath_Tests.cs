@@ -23,6 +23,13 @@ namespace Microsoft.Build.UnitTests.Evaluation
     /// </summary>
     public class ImportFromMSBuildExtensionsPathTests : IDisposable
     {
+        string toolsVersionToUse = null;
+
+        public ImportFromMSBuildExtensionsPathTests()
+        {
+            toolsVersionToUse = new ProjectCollection().DefaultToolsVersion;
+        }
+
         public void Dispose()
         {
             ToolsetConfigurationReaderTestHelper.CleanUp();
@@ -354,8 +361,8 @@ namespace Microsoft.Build.UnitTests.Evaluation
                    <configSections>
                      <section name=""msbuildToolsets"" type=""Microsoft.Build.Evaluation.ToolsetConfigurationSection, Microsoft.Build"" />
                    </configSections>
-                   <msbuildToolsets default=""14.1"">
-                     <toolset toolsVersion=""14.1"">
+                   <msbuildToolsets default=""" + toolsVersionToUse + @""">
+                     <toolset toolsVersion=""" + toolsVersionToUse + @""">
                        <property name=""MSBuildToolsPath"" value="".""/>
                        <property name=""MSBuildBinPath"" value=""" + /*v4Folder*/"." + @"""/>
                        <projectImportSearchPaths>
@@ -432,8 +439,8 @@ namespace Microsoft.Build.UnitTests.Evaluation
                    <configSections>
                      <section name=""msbuildToolsets"" type=""Microsoft.Build.Evaluation.ToolsetConfigurationSection, Microsoft.Build"" />
                    </configSections>
-                   <msbuildToolsets default=""14.1"">
-                     <toolset toolsVersion=""14.1"">
+                   <msbuildToolsets default=""" + toolsVersionToUse + @""">
+                     <toolset toolsVersion=""" + toolsVersionToUse + @""">
                        <property name=""MSBuildToolsPath"" value="".""/>
                        <property name=""MSBuildBinPath"" value="".""/>
                        <projectImportSearchPaths>
@@ -493,8 +500,8 @@ namespace Microsoft.Build.UnitTests.Evaluation
                    <configSections>
                      <section name=""msbuildToolsets"" type=""Microsoft.Build.Evaluation.ToolsetConfigurationSection, Microsoft.Build"" />
                    </configSections>
-                   <msbuildToolsets default=""14.1"">
-                     <toolset toolsVersion=""14.1"">
+                   <msbuildToolsets default=""" + toolsVersionToUse + @""">
+                     <toolset toolsVersion=""" + toolsVersionToUse + @""">
                        <property name=""MSBuildToolsPath"" value="".""/>
                        <property name=""MSBuildBinPath"" value="".""/>
                        <projectImportSearchPaths>
@@ -563,8 +570,8 @@ namespace Microsoft.Build.UnitTests.Evaluation
                   <configSections>
                     <section name=""msbuildToolsets"" type=""Microsoft.Build.Evaluation.ToolsetConfigurationSection, Microsoft.Build"" />
                   </configSections>
-                  <msbuildToolsets default=""14.1"">
-                    <toolset toolsVersion=""14.1"">
+                  <msbuildToolsets default=""" + toolsVersionToUse + @""">
+                    <toolset toolsVersion=""" + toolsVersionToUse + @""">
                       <property name=""MSBuildToolsPath"" value="".""/>
                       <property name=""MSBuildBinPath"" value="".""/>
                       <projectImportSearchPaths>
@@ -583,6 +590,71 @@ namespace Microsoft.Build.UnitTests.Evaluation
             try
             {
                 extnDir1 = GetNewExtensionsPathAndCreateFile("extensions1", Path.Combine("Microsoft", "VisualStudio", "v99", "DNX", "Microsoft.DNX.Props"),
+                    extnTargetsFileContentTemplate);
+
+                mainProjectPath = ObjectModelHelpers.CreateFileInTempProjectDirectory("main.proj", mainTargetsFileContent);
+
+                ToolsetConfigurationReaderTestHelper.WriteConfigFile(configFileContents);
+                var reader = GetStandardConfigurationReader();
+
+                var projectCollection = new ProjectCollection(new Dictionary<string, string> { ["FallbackExpandDir1"] = extnDir1 });
+
+                projectCollection.ResetToolsetsForTests(reader);
+                var logger = new MockLogger();
+                projectCollection.RegisterLogger(logger);
+
+                var project = projectCollection.LoadProject(mainProjectPath);
+                Assert.True(project.Build("Main"));
+                logger.AssertLogContains("Running FromExtn");
+            }
+            finally
+            {
+                FileUtilities.DeleteNoThrow(mainProjectPath);
+                FileUtilities.DeleteDirectoryNoThrow(extnDir1, true);
+            }
+        }
+
+        // Fall-back search path on a property that is not defined.
+        [Fact]
+        public void FallbackImportWithUndefinedProperty()
+        {
+            string mainTargetsFileContent = @"
+               <Project xmlns='http://schemas.microsoft.com/developer/msbuild/2003' >
+                   <Import Project='$(UndefinedProperty)\file.props' Condition=""Exists('$(UndefinedProperty)\file.props')"" />
+                   <Target Name='Main' DependsOnTargets='FromExtn' />
+               </Project>";
+
+            string extnTargetsFileContentTemplate = @"
+               <Project xmlns='http://schemas.microsoft.com/developer/msbuild/2003' >
+                   <Target Name='FromExtn'>
+                       <Message Text='Running FromExtn'/>
+                   </Target>
+               </Project>";
+
+            var configFileContents = @"
+                <configuration>
+                  <configSections>
+                    <section name=""msbuildToolsets"" type=""Microsoft.Build.Evaluation.ToolsetConfigurationSection, Microsoft.Build"" />
+                  </configSections>
+                  <msbuildToolsets default=""14.1"">
+                    <toolset toolsVersion=""14.1"">
+                      <property name=""MSBuildToolsPath"" value="".""/>
+                      <property name=""MSBuildBinPath"" value="".""/>
+                      <projectImportSearchPaths>
+                        <searchPaths os=""" + NativeMethodsShared.GetOSNameForExtensionsPath() + @""">
+                          <property name=""UndefinedProperty"" value=""$(FallbackExpandDir1)"" />
+                        </searchPaths>
+                      </projectImportSearchPaths>
+                     </toolset>
+                  </msbuildToolsets>
+                </configuration>";
+
+            string extnDir1 = null;
+            string mainProjectPath = null;
+
+            try
+            {
+                extnDir1 = GetNewExtensionsPathAndCreateFile("extensions1", Path.Combine("file.props"),
                     extnTargetsFileContentTemplate);
 
                 mainProjectPath = ObjectModelHelpers.CreateFileInTempProjectDirectory("main.proj", mainTargetsFileContent);
@@ -673,8 +745,8 @@ namespace Microsoft.Build.UnitTests.Evaluation
                    <configSections>
                      <section name=""msbuildToolsets"" type=""Microsoft.Build.Evaluation.ToolsetConfigurationSection, Microsoft.Build"" />
                    </configSections>
-                   <msbuildToolsets default=""14.1"">
-                     <toolset toolsVersion=""14.1"">
+                   <msbuildToolsets default=""" + toolsVersionToUse + @""">
+                     <toolset toolsVersion=""" + toolsVersionToUse + @""">
                        <property name=""MSBuildToolsPath"" value=""."" />
                        <property name=""MSBuildBinPath"" value=""."" />
                        <projectImportSearchPaths>

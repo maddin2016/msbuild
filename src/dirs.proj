@@ -7,7 +7,11 @@
     <Project Include="Utilities\Microsoft.Build.Utilities.csproj" />
     <Project Include="XMakeBuildEngine\Microsoft.Build.csproj" />
     <Project Include="XMakeCommandLine\MSBuild.csproj" />
+    <Project Include="XMakeCommandLine\MSBuildTaskHost\MSBuildTaskHost.csproj"
+             Condition="'$(FullFrameworkBuild)' == 'true'" />
     <Project Include="XMakeTasks\Microsoft.Build.Tasks.csproj" />
+    <Project Include="OrcasEngine\OrcasEngine.csproj" Condition="$(FullFrameworkBuild) == 'true'" />
+    <Project Include="XMakeConversion\XMakeConversion.csproj" Condition="$(FullFrameworkBuild) == 'true'" />
 
     <Project Include="Framework\UnitTests\Microsoft.Build.Framework.UnitTests.csproj" />
     <Project Include="XMakeCommandLine\UnitTests\Microsoft.Build.CommandLine.UnitTests.csproj" />
@@ -29,9 +33,21 @@
 
   <PropertyGroup>
     <SkipVersionGeneration>true</SkipVersionGeneration>
+    <BaseVersion>0.1.0-preview</BaseVersion>
     <BuildNumberMajor>$(RevisionNumber)</BuildNumberMajor>
     <BuildNumberMinor>$([System.DateTime]::Now.ToString(`yMMdd`))</BuildNumberMinor>
+
+    <!-- The version for msbuild nuget packages. Used by packages.targets:AddNuGetPackageVersionMetadataToNuspecs -->
+    <PackageVersion>$(BaseVersion)-$(BuildNumberMajor)-$(BuildNumberMinor)</PackageVersion>
+
+    <!-- Turn off the automated package generation in packages.targets:AddNuGetPackageVersionMetadataToNuspecs and use the above PackageVersion-->
+    <DoNotGeneratePackageVersion>true</DoNotGeneratePackageVersion>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Used by packages.targets:BuildPackages to inject properties into the nuspec-->
+    <NuspecProperties Include="version=$(PackageVersion)"/>
+  </ItemGroup>
 
   <Import Project="$(ToolsDir)packages.targets" Condition="Exists('$(ToolsDir)packages.targets') and '$(ImportGetNuGetPackageVersions)' != 'false'" />
 
@@ -42,7 +58,12 @@
     </TraversalBuildDependsOn>
   </PropertyGroup>
 
-
-
+  <!-- Workaround to remove items from PackagesNuSpecFiles (defined in packages.targets). This ItemGroup
+       is defined with a wildcard Include and no way to override. -->
+  <Target Name="RemovePackages" BeforeTargets="BuildPackages" Condition="$(FullFrameworkBuild) != 'true'" >
+    <ItemGroup>
+        <PackagesNuSpecFiles Remove="$(SourceDir)nuget\Microsoft.Build.Engine.nuspec;$(SourceDir)nuget\Microsoft.Build.Conversion.Core.nuspec" />
+    </ItemGroup>
+  </Target>
 
 </Project>

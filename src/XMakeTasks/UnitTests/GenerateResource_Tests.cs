@@ -2008,9 +2008,7 @@ namespace Microsoft.Build.UnitTests.GenerateResource_Tests.InProc
         /// <summary>
         ///  Source item not found
         /// </summary>
-        [Fact]
-        [Trait("Category", "mono-osx-failing")]
-        [Trait("Category", "mono-windows-failing")]
+        [Fact(Skip = "https://github.com/Microsoft/msbuild/issues/799")]
         public void SourceItemMissing()
         {
             string txtFile = null;
@@ -2462,7 +2460,8 @@ namespace Microsoft.Build.UnitTests.GenerateResource_Tests.InProc
 
     public class References
     {
-        [Fact(Skip = "https://github.com/Microsoft/msbuild/issues/309")]
+        [Fact]
+        [Trait("Category", "netcore-osx-failing")] // https://github.com/Microsoft/msbuild/issues/309
         public void DontLockP2PReferenceWhenResolvingSystemTypes()
         {
             // This WriteLine is a hack.  On a slow machine, the Tasks unittest fails because remoting
@@ -2639,7 +2638,8 @@ namespace Microsoft.Build.UnitTests.GenerateResource_Tests.InProc
         /// which fails (LoadFile requires an absolute path).  The fix was to use 
         /// Assembly.LoadFrom instead.
         /// </summary>
-        [Fact (Skip = "https://github.com/Microsoft/msbuild/issues/309")]
+        [Fact]
+        [Trait("Category", "netcore-osx-failing")] // https://github.com/Microsoft/msbuild/issues/309
         public void ReferencedAssemblySpecifiedUsingRelativePath()
         {
             // This WriteLine is a hack.  On a slow machine, the Tasks unittest fails because remoting
@@ -2771,14 +2771,17 @@ namespace Microsoft.Build.UnitTests.GenerateResource_Tests.InProc
             string originalCurrentDirectory = Directory.GetCurrentDirectory();
             Directory.SetCurrentDirectory(ObjectModelHelpers.TempProjectDir);
 
-            bool success = t.Execute();
-
-            // Restore the current working directory to what it was before the test.
-            Directory.SetCurrentDirectory(originalCurrentDirectory);
-
-            // Make sure the resource was built.
-            Assert.True(success); // "GenerateResource failed"
-            ObjectModelHelpers.AssertFileExistsInTempProjectDirectory("MyStrings.resources");
+            try
+            {
+                bool success = t.Execute();
+                // Make sure the resource was built.
+                Assert.True(success); // "GenerateResource failed"
+                ObjectModelHelpers.AssertFileExistsInTempProjectDirectory("MyStrings.resources");
+            }
+            finally
+            {
+                Directory.SetCurrentDirectory(originalCurrentDirectory);
+            }
         }
     }
 
@@ -3339,7 +3342,7 @@ namespace Microsoft.Build.UnitTests.GenerateResource_Tests
 #if FEATURE_INSTALLED_MSBUILD
                 ToolLocationHelper.GetPathToDotNetFrameworkFile("system.dll", TargetDotNetFrameworkVersion.Version45);
 #else
-                Path.Combine(FileUtilities.CurrentExecutableDirectory, "system.dll");
+                Path.Combine(BuildEnvironmentHelper.Instance.CurrentMSBuildToolsDirectory, "system.dll");
 #endif
 
             File.Copy(pathToSystemDLL, tempSystemDLL);

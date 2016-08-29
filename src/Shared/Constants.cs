@@ -17,10 +17,17 @@ namespace Microsoft.Build.Shared
         internal const string ToolsPath = "MSBuildToolsPath";
 
         /// <summary>
+        /// Name of the property that indicates the X64 tools path
+        /// </summary>
+        internal const string ToolsPath64 = "MSBuildToolsPath64";
+
+        /// <summary>
         /// The most current Visual Studio Version known to this version of MSBuild. 
         /// </summary>
 #if STANDALONEBUILD
+#if STATIC_VERSION_NUMBER
         internal const string CurrentVisualStudioVersion = "15.0";
+#endif
 #else
         internal const string CurrentVisualStudioVersion = Microsoft.VisualStudio.Internal.BrandNames.VSGeneralVersion;
 #endif
@@ -28,7 +35,7 @@ namespace Microsoft.Build.Shared
         /// <summary>
         /// The most current ToolsVersion known to this version of MSBuild. 
         /// </summary>
-        internal static string CurrentToolsVersion = CurrentVisualStudioVersion;
+        internal const string CurrentToolsVersion = CurrentVisualStudioVersion;
 
         /// <summary>
         /// The most current ToolsVersion known to this version of MSBuild as a Version object. 

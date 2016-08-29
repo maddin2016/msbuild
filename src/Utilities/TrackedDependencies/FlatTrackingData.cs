@@ -439,7 +439,7 @@ namespace Microsoft.Build.Utilities
                 {
                     FileTracker.LogMessage(_log, MessageImportance.Low, "\t{0}", tlogFileName.ItemSpec);
 
-                    DateTime tlogLastWriteTimeUtc = NativeMethods.GetLastWriteTimeUtc(tlogFileName.ItemSpec);
+                    DateTime tlogLastWriteTimeUtc = NativeMethodsShared.GetLastWriteFileUtcTime(tlogFileName.ItemSpec);
                     if (tlogLastWriteTimeUtc > _newestTLogTimeUtc)
                     {
                         _newestTLogTimeUtc = tlogLastWriteTimeUtc;
@@ -494,13 +494,8 @@ namespace Microsoft.Build.Utilities
                         }
                     }
                 }
-                catch (Exception e)
+                catch (Exception e) when (ExceptionHandling.IsIoRelatedException(e))
                 {
-                    if (ExceptionHandling.NotExpectedException(e))
-                    {
-                        throw;
-                    }
-
                     FileTracker.LogWarningWithCodeFromResources(_log, "Tracking_RebuildingDueToInvalidTLog", e.Message);
                     break;
                 }
@@ -552,7 +547,7 @@ namespace Microsoft.Build.Utilities
             // First update the details of our Tlogs
             foreach (ITaskItem tlogFileName in _tlogFiles)
             {
-                DateTime tlogLastWriteTimeUtc = NativeMethods.GetLastWriteTimeUtc(tlogFileName.ItemSpec);
+                DateTime tlogLastWriteTimeUtc = NativeMethodsShared.GetLastWriteFileUtcTime(tlogFileName.ItemSpec);
                 if (tlogLastWriteTimeUtc > _newestTLogTimeUtc)
                 {
                     _newestTLogTimeUtc = tlogLastWriteTimeUtc;
@@ -712,7 +707,7 @@ namespace Microsoft.Build.Utilities
             DateTime fileModifiedTimeUtc = DateTime.MinValue;
             if (!_lastWriteTimeUtcCache.TryGetValue(file, out fileModifiedTimeUtc))
             {
-                fileModifiedTimeUtc = NativeMethods.GetLastWriteTimeUtc(file);
+                fileModifiedTimeUtc = NativeMethodsShared.GetLastWriteFileUtcTime(file);
                 _lastWriteTimeUtcCache[file] = fileModifiedTimeUtc;
             }
 

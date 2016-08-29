@@ -593,9 +593,11 @@ namespace Microsoft.Build.UnitTests
             Assert.Equal(tv12path, ToolLocationHelper.GetPathToBuildToolsFile("MSBuild.exe", ToolLocationHelper.CurrentToolsVersion));
         }
 
-        [Fact(Skip = "Ignored in MSTest")]
-
-        // Ignore: Test requires installed toolset.
+#if RUNTIME_TYPE_NETCORE
+        [Fact(Skip = "https://github.com/Microsoft/msbuild/issues/722")]
+#else
+        [Fact]
+#endif
         public void TestGetPathToBuildToolsFile_32Bit()
         {
             string net20Path = ToolLocationHelper.GetPathToDotNetFrameworkFile("msbuild.exe", TargetDotNetFrameworkVersion.Version20, UtilitiesDotNetFrameworkArchitecture.Bitness32);
@@ -617,15 +619,19 @@ namespace Microsoft.Build.UnitTests
                     ToolLocationHelper.GetPathToBuildToolsFile("msbuild.exe", "4.0", UtilitiesDotNetFrameworkArchitecture.Bitness32)
                 );
 
-            string tv12path = Path.Combine(ProjectCollection.GlobalProjectCollection.GetToolset(ObjectModelHelpers.MSBuildDefaultToolsVersion).Properties["MSBuildToolsPath32"].EvaluatedValue, "msbuild.exe");
+
+            var toolsPath32 = ProjectCollection.GlobalProjectCollection.GetToolset(ObjectModelHelpers.MSBuildDefaultToolsVersion).Properties["MSBuildToolsPath32"];
+            string tv12path = Path.Combine(Path.GetFullPath(toolsPath32.EvaluatedValue), "msbuild.exe");
 
             Assert.Equal(tv12path, ToolLocationHelper.GetPathToBuildToolsFile("msbuild.exe", ObjectModelHelpers.MSBuildDefaultToolsVersion, UtilitiesDotNetFrameworkArchitecture.Bitness32));
             Assert.Equal(tv12path, ToolLocationHelper.GetPathToBuildToolsFile("msbuild.exe", ToolLocationHelper.CurrentToolsVersion, UtilitiesDotNetFrameworkArchitecture.Bitness32));
         }
 
-        [Fact(Skip = "Ignored in MSTest")]
-
-        // Ignore: Test requires installed toolset.
+#if RUNTIME_TYPE_NETCORE
+        [Fact(Skip = "https://github.com/Microsoft/msbuild/issues/722")]
+#else
+        [Fact]
+#endif
         public void TestGetPathToBuildToolsFile_64Bit()
         {
             if (String.IsNullOrEmpty(Environment.GetEnvironmentVariable("ProgramFiles(x86)")))
@@ -653,10 +659,35 @@ namespace Microsoft.Build.UnitTests
                     ToolLocationHelper.GetPathToBuildToolsFile("msbuild.exe", "4.0", UtilitiesDotNetFrameworkArchitecture.Bitness64)
                 );
 
-            string tv12path = Path.Combine(ProjectCollection.GlobalProjectCollection.GetToolset(ObjectModelHelpers.MSBuildDefaultToolsVersion).Properties["MSBuildToolsPath32"].EvaluatedValue, "amd64", "msbuild.exe");
+            var toolsPath32 = ProjectCollection.GlobalProjectCollection.GetToolset(ObjectModelHelpers.MSBuildDefaultToolsVersion).Properties["MSBuildToolsPath32"];
+            var toolsPath64 = Path.Combine(Path.GetFullPath(toolsPath32.EvaluatedValue), "amd64");
+            var tv12path = Path.Combine(toolsPath64, "msbuild.exe");
+            bool created = false;
 
-            Assert.Equal(tv12path, ToolLocationHelper.GetPathToBuildToolsFile("msbuild.exe", ObjectModelHelpers.MSBuildDefaultToolsVersion, UtilitiesDotNetFrameworkArchitecture.Bitness64));
-            Assert.Equal(tv12path, ToolLocationHelper.GetPathToBuildToolsFile("msbuild.exe", ToolLocationHelper.CurrentToolsVersion, UtilitiesDotNetFrameworkArchitecture.Bitness64));
+            try
+            {
+                // When building normally, the AMD64 folder will not exist. The method we're testing will return null if the path
+                // doesn't exist or msbuild.exe is not located in that path.
+                if (!Directory.Exists(toolsPath64))
+                {
+                    Directory.CreateDirectory(toolsPath64);
+                    created = true;
+                    if (!File.Exists(tv12path))
+                    {
+                        File.WriteAllText(tv12path, string.Empty);
+                    }
+                }
+
+                Assert.Equal(tv12path, ToolLocationHelper.GetPathToBuildToolsFile("msbuild.exe", ObjectModelHelpers.MSBuildDefaultToolsVersion, UtilitiesDotNetFrameworkArchitecture.Bitness64));
+                Assert.Equal(tv12path, ToolLocationHelper.GetPathToBuildToolsFile("msbuild.exe", ToolLocationHelper.CurrentToolsVersion, UtilitiesDotNetFrameworkArchitecture.Bitness64));
+            }
+            finally
+            {
+                if (created)
+                {
+                    FileUtilities.DeleteDirectoryNoThrow(toolsPath64, true);
+                }
+            }
         }
 
         [Fact]
@@ -695,6 +726,7 @@ namespace Microsoft.Build.UnitTests
             string fullDotNetFrameworkSdkRegistryPathForV4ToolsOnManagedToolsSDK81A = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Microsoft SDKs\Windows\v8.1A\WinSDK-NetFx40Tools-x86";
             string fullDotNetFrameworkSdkRegistryPathForV4ToolsOnManagedToolsSDK46 = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Microsoft SDKs\NETFXSDK\4.6\WinSDK-NetFx40Tools-x86";
             string fullDotNetFrameworkSdkRegistryPathForV4ToolsOnManagedToolsSDK461 = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Microsoft SDKs\NETFXSDK\4.6.1\WinSDK-NetFx40Tools-x86";
+            string fullDotNetFrameworkSdkRegistryPathForV4ToolsOnManagedToolsSDK462 = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Microsoft SDKs\NETFXSDK\4.6.2\WinSDK-NetFx40Tools-x86";
 
             // v4.0
             Assert.Equal(ToolLocationHelper.GetDotNetFrameworkSdkRootRegistryKey(TargetDotNetFrameworkVersion.Version40, VisualStudioVersion.Version100), fullDotNetFrameworkSdkRegistryPathForV4ToolsOnManagedToolsSDK70A);
@@ -714,6 +746,12 @@ namespace Microsoft.Build.UnitTests
             Assert.Equal(ToolLocationHelper.GetDotNetFrameworkSdkRootRegistryKey(TargetDotNetFrameworkVersion.Version451, VisualStudioVersion.Version120), fullDotNetFrameworkSdkRegistryPathForV4ToolsOnManagedToolsSDK81A);
             Assert.Equal(ToolLocationHelper.GetDotNetFrameworkSdkRootRegistryKey(TargetDotNetFrameworkVersion.Version451, VisualStudioVersion.Version140), fullDotNetFrameworkSdkRegistryPathForV4ToolsOnManagedToolsSDK46);
 
+            // v4.5.2
+            ObjectModelHelpers.AssertThrows(typeof(ArgumentException), delegate { ToolLocationHelper.GetDotNetFrameworkSdkRootRegistryKey(TargetDotNetFrameworkVersion.Version452, VisualStudioVersion.Version100); });
+            ObjectModelHelpers.AssertThrows(typeof(ArgumentException), delegate { ToolLocationHelper.GetDotNetFrameworkSdkRootRegistryKey(TargetDotNetFrameworkVersion.Version452, VisualStudioVersion.Version110); });
+            Assert.Equal(ToolLocationHelper.GetDotNetFrameworkSdkRootRegistryKey(TargetDotNetFrameworkVersion.Version452, VisualStudioVersion.Version120), fullDotNetFrameworkSdkRegistryPathForV4ToolsOnManagedToolsSDK81A);
+            Assert.Equal(ToolLocationHelper.GetDotNetFrameworkSdkRootRegistryKey(TargetDotNetFrameworkVersion.Version452, VisualStudioVersion.Version140), fullDotNetFrameworkSdkRegistryPathForV4ToolsOnManagedToolsSDK46);
+
             // v4.6
             ObjectModelHelpers.AssertThrows(typeof(ArgumentException), delegate { ToolLocationHelper.GetDotNetFrameworkSdkRootRegistryKey(TargetDotNetFrameworkVersion.Version46, VisualStudioVersion.Version100); });
             ObjectModelHelpers.AssertThrows(typeof(ArgumentException), delegate { ToolLocationHelper.GetDotNetFrameworkSdkRootRegistryKey(TargetDotNetFrameworkVersion.Version46, VisualStudioVersion.Version110); });
@@ -726,6 +764,12 @@ namespace Microsoft.Build.UnitTests
             ObjectModelHelpers.AssertThrows(typeof(ArgumentException), delegate { ToolLocationHelper.GetDotNetFrameworkSdkRootRegistryKey(TargetDotNetFrameworkVersion.Version461, VisualStudioVersion.Version110); });
             ObjectModelHelpers.AssertThrows(typeof(ArgumentException), delegate { ToolLocationHelper.GetDotNetFrameworkSdkRootRegistryKey(TargetDotNetFrameworkVersion.Version461, VisualStudioVersion.Version120); });
             Assert.Equal(ToolLocationHelper.GetDotNetFrameworkSdkRootRegistryKey(TargetDotNetFrameworkVersion.Version461, VisualStudioVersion.Version140), fullDotNetFrameworkSdkRegistryPathForV4ToolsOnManagedToolsSDK461);
+
+            // v4.6.2
+            ObjectModelHelpers.AssertThrows(typeof(ArgumentException), delegate { ToolLocationHelper.GetDotNetFrameworkSdkRootRegistryKey(TargetDotNetFrameworkVersion.Version462, VisualStudioVersion.Version100); });
+            ObjectModelHelpers.AssertThrows(typeof(ArgumentException), delegate { ToolLocationHelper.GetDotNetFrameworkSdkRootRegistryKey(TargetDotNetFrameworkVersion.Version462, VisualStudioVersion.Version110); });
+            ObjectModelHelpers.AssertThrows(typeof(ArgumentException), delegate { ToolLocationHelper.GetDotNetFrameworkSdkRootRegistryKey(TargetDotNetFrameworkVersion.Version462, VisualStudioVersion.Version120); });
+            Assert.Equal(ToolLocationHelper.GetDotNetFrameworkSdkRootRegistryKey(TargetDotNetFrameworkVersion.Version462, VisualStudioVersion.Version150), fullDotNetFrameworkSdkRegistryPathForV4ToolsOnManagedToolsSDK462);
         }
 
         [Fact]
@@ -951,8 +995,8 @@ namespace Microsoft.Build.UnitTests
                                     }
   ";
 
-        [Fact(Skip = "Ignored in MSTest")]
-        // Ignore: Test requires installed toolset.
+#if FEATURE_CODETASKFACTORY
+        [Fact]
         public void VerifyToolsetAndToolLocationHelperAgree()
         {
             string projectContents = ObjectModelHelpers.CleanupFileContents(@"
@@ -1006,7 +1050,6 @@ namespace Microsoft.Build.UnitTests
             Assert.True(success); // "Build Failed.  See Std Out for details."
         }
 
-#if FEATURE_CODETASKFACTORY
         [Fact]
         [Trait("Category", "mono-osx-failing")]
         public void VerifyToolsetAndToolLocationHelperAgreeWhenVisualStudioVersionIsEmpty()
@@ -1093,11 +1136,8 @@ namespace Microsoft.Build.UnitTests
             Assert.True(success); // "Build Failed.  See Std Out for details."
         }
 
-#if STANDALONEBUILD
-        [Fact(Skip = "Test failed in MSTest pre-xunit conversion")]
-#else
         [Fact]
-#endif
+        [PlatformSpecific(Xunit.PlatformID.Windows)]
         public void VerifyToolsetAndToolLocationHelperAgreeWhenVisualStudioVersionIs11()
         {
             string projectContents = @"
@@ -2437,6 +2477,106 @@ namespace Microsoft.Build.UnitTests
         }
 #endif
 
+        [Fact]
+        public void GetPathToStandardLibrariesWithCustomTargetFrameworkRoot()
+        {
+            string frameworkName = "Foo Framework";
+            string frameworkVersion = "v0.1";
+            string rootDir = Path.Combine(Path.GetTempPath(), "framework-root");
+
+            try {
+                string asmPath = CreateNewFrameworkAndGetAssembliesPath(frameworkName, frameworkVersion, rootDir);
+
+                string stdLibPath = ToolLocationHelper.GetPathToStandardLibraries(frameworkName, frameworkVersion, String.Empty, null, rootDir);
+                Assert.Equal(asmPath, stdLibPath);
+            } finally {
+                FileUtilities.DeleteDirectoryNoThrow(rootDir, recursive:true);
+            }
+        }
+
+        [Fact]
+        public void GetPathToStandardLibrariesWithNullTargetFrameworkRootPath()
+        {
+            string frameworkName = ".NETFramework";
+            string frameworkVersion = "v4.5";
+
+            string v45Path = ToolLocationHelper.GetPathToStandardLibraries(frameworkName, frameworkVersion, String.Empty);
+            // This look up should fall back the default path with the .NET frameworks
+            string v45PathWithNullRoot = ToolLocationHelper.GetPathToStandardLibraries(frameworkName, frameworkVersion, String.Empty, null);
+
+            Assert.Equal(v45Path, v45PathWithNullRoot);
+        }
+
+        [Fact]
+        public void GetPathToReferenceAssembliesWithCustomTargetFrameworkRoot()
+        {
+            string frameworkName = "Foo Framework";
+            string frameworkVersion = "v0.1";
+            string rootDir = Path.Combine(Path.GetTempPath(), "framework-root");
+
+            try {
+                string asmPath = CreateNewFrameworkAndGetAssembliesPath(frameworkName, frameworkVersion, rootDir);
+
+                var stdLibPaths = ToolLocationHelper.GetPathToReferenceAssemblies(frameworkName, frameworkVersion, String.Empty, rootDir);
+                if (NativeMethodsShared.IsMono)
+                {
+                    Assert.Equal(2, stdLibPaths.Count);
+                    Assert.Equal(Path.Combine(rootDir, frameworkName, frameworkVersion) + Path.DirectorySeparatorChar.ToString(), stdLibPaths[0]);
+                    Assert.Equal(asmPath + Path.DirectorySeparatorChar.ToString(), stdLibPaths[1]);
+                }
+                else
+                {
+                    Assert.Equal(1, stdLibPaths.Count);
+                    Assert.Equal(Path.Combine(rootDir, frameworkName, frameworkVersion) + Path.DirectorySeparatorChar.ToString(), stdLibPaths[0]);
+                }
+
+            } finally {
+                FileUtilities.DeleteDirectoryNoThrow(rootDir, recursive:true);
+            }
+        }
+
+        [Fact]
+        public void GetPathToReferenceAssembliesWithNullTargetFrameworkRootPath()
+        {
+            string frameworkName = ".NETFramework";
+            string frameworkVersion = "v4.5";
+
+            var v45Paths = ToolLocationHelper.GetPathToReferenceAssemblies(frameworkName, frameworkVersion, String.Empty);
+
+            // This look up should fall back the default path with the .NET frameworks
+            var v45PathsWithNullRoot = ToolLocationHelper.GetPathToReferenceAssemblies(frameworkName, frameworkVersion, String.Empty, null);
+
+            Assert.Equal(v45Paths, v45PathsWithNullRoot);
+        }
+
+        string CreateNewFrameworkAndGetAssembliesPath(string frameworkName, string frameworkVersion, string rootDir)
+        {
+            string frameworkListXml = null;
+            if (NativeMethodsShared.IsMono)
+            {
+                // Mono uses an extra attribute to point to the location of the corresponding
+                // assemblies
+                frameworkListXml = @"<?xml version=""1.0"" encoding=""utf-8""?>
+                    <FileList  Name=""{0}"" TargetFrameworkDirectory=""..\assemblies"" />";
+            }
+            else
+            {
+                frameworkListXml = @"<?xml version=""1.0"" encoding=""utf-8""?>
+                    <FileList  Name=""{0}""/>";
+            }
+
+            string redistPath = Path.Combine(rootDir, frameworkName, frameworkVersion, "RedistList");
+            string asmPath = Path.Combine(rootDir, frameworkName, frameworkVersion, NativeMethodsShared.IsMono ? "assemblies" : String.Empty);
+
+            Directory.CreateDirectory(redistPath);
+            Directory.CreateDirectory(asmPath);
+
+            File.WriteAllText(Path.Combine(redistPath, "FrameworkList.xml"), String.Format(frameworkListXml, frameworkName));
+            File.WriteAllText(Path.Combine(asmPath, "mscorlib.dll"), String.Empty);
+
+            return asmPath;
+        }
+
         /*
         * Method:   GetDirectories
         *
@@ -2771,29 +2911,12 @@ namespace Microsoft.Build.UnitTests
         /// </summary>
         private static void VerifyExceptionOnEmptyOrNullPlatformAttributes(string identifier, Version version)
         {
-            bool caughtCorrectException = false;
-            try
-            {
-                ToolLocationHelper.GetPlatformExtensionSDKLocations(identifier, version);
-            }
-            catch (ArgumentException)
-            {
-                caughtCorrectException = true;
-            }
 
-            Assert.True(caughtCorrectException);
+            Assert.ThrowsAny<ArgumentException>(
+                () => ToolLocationHelper.GetPlatformExtensionSDKLocations(identifier, version));
 
-            caughtCorrectException = false;
-            try
-            {
-                ToolLocationHelper.GetPlatformSDKLocation(identifier, version);
-            }
-            catch (ArgumentException)
-            {
-                caughtCorrectException = true;
-            }
-
-            Assert.True(caughtCorrectException);
+            Assert.ThrowsAny<ArgumentException>(
+                () => ToolLocationHelper.GetPlatformSDKLocation(identifier, version));
         }
 
         /// <summary>
@@ -2948,31 +3071,11 @@ namespace Microsoft.Build.UnitTests
         [Fact]
         public void VerifySDKManifestWithNullOrEmptyParameter()
         {
-            bool exceptionCaught = false;
-            try
-            {
-                SDKManifest manifestObject = new SDKManifest(null);
-                Assert.True(false);
-            }
-            catch (ArgumentNullException)
-            {
-                exceptionCaught = true;
-            }
+            Assert.Throws<ArgumentNullException>(() =>
+                new SDKManifest(null));
 
-            Assert.True(exceptionCaught);
-
-            exceptionCaught = false;
-            try
-            {
-                SDKManifest manifestObject = new SDKManifest("");
-                Assert.True(false);
-            }
-            catch (ArgumentException)
-            {
-                exceptionCaught = true;
-            }
-
-            Assert.True(exceptionCaught);
+            Assert.Throws<ArgumentException>(() =>
+                new SDKManifest(""));
         }
 
         /// <summary>
@@ -3771,8 +3874,7 @@ namespace Microsoft.Build.UnitTests
         /// Verify based on a fake directory structure with some good directories and some invalid ones at each level that we 
         /// get the expected set out.
         /// </summary>
-        [Fact]
-        [Trait("Category", "mono-windows-failing")]
+        [Fact(Skip = "https://github.com/Microsoft/msbuild/issues/799")]
         public void ResolveSDKFromRegistry()
         {
             if (!NativeMethodsShared.IsWindows)
@@ -3864,9 +3966,7 @@ namespace Microsoft.Build.UnitTests
         /// get the expected set out. Make sure that when we resolve from both the disk and registry that there are no duplicates
         /// and make sure we get the expected results.
         /// </summary>
-        [Fact]
-        [Trait("Category", "mono-osx-failing")]
-        [Trait("Category", "mono-windows-failing")]
+        [Fact(Skip = "https://github.com/Microsoft/msbuild/issues/799")]
         public void ResolveSDKFromRegistryAndDisk()
         {
             Dictionary<TargetPlatformSDK, TargetPlatformSDK> targetPlatforms = new Dictionary<TargetPlatformSDK, TargetPlatformSDK>();

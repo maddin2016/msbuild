@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="..\dir.props" />
   <PropertyGroup>
@@ -88,6 +88,9 @@
     </Compile>
     <Compile Include="..\Shared\FileUtilities.GetFolderPath.cs" Condition="'$(FeatureSpecialFolders)' != 'true'">
       <Link>SharedUtilities\FileUtilities.GetFolderPath.cs</Link>
+    </Compile>
+    <Compile Include="..\Shared\BuildEnvironmentHelper.cs">
+      <Link>SharedUtilities\BuildEnvironmentHelper.cs</Link>
     </Compile>
     <Compile Include="..\Shared\FxCopExclusions\Microsoft.Build.Shared.Suppressions.cs">
       <ExcludeFromStyleCop>true</ExcludeFromStyleCop>
@@ -222,6 +225,11 @@
     <Compile Include="Definition\ProjectImportPathMatch.cs" />
     <Compile Include="Definition\ToolsetLocalReader.cs" />
     <Compile Include="Evaluation\ItemsAndMetadataPair.cs" />
+    <Compile Include="Evaluation\LazyItemEvaluator.cs" />
+    <Compile Include="Evaluation\LazyItemEvaluator.UpdateOperation.cs" />
+    <Compile Include="Evaluation\LazyItemEvaluator.IncludeOperation.cs" />
+    <Compile Include="Evaluation\LazyItemEvaluator.ItemFactoryWrapper.cs" />
+    <Compile Include="Evaluation\LazyItemEvaluator.RemoveOperation.cs" />
     <Compile Include="Evaluation\MetadataReference.cs" />
     <Compile Include="Evaluation\ProjectChangedEventArgs.cs" />
     <Compile Include="Evaluation\ProjectXmlChangedEventArgs.cs" />
@@ -518,6 +526,7 @@
     <Compile Include="Instance\TaskFactoryWrapper.cs" />
     <Compile Include="Instance\TaskRegistry.cs" />
     <!-- ######################## -->
+    <Compile Include="Evaluation\LazyItemEvaluator.LazyItemOperation.cs" />
     <Compile Include="Logging\BaseConsoleLogger.cs">
       <ExcludeFromStyleCop>true</ExcludeFromStyleCop>
     </Compile>
@@ -700,13 +709,18 @@
     </Compile>
     <!-- Win32 RC Files -->
     <RCResourceFile Include="native.rc" />
+
+    <!-- Resource Files -->
+
     <EmbeddedResource Include="Resources\Strings.resx">
+      <LogicalName>$(AssemblyName).Strings.resources</LogicalName>
       <SubType>Designer</SubType>
     </EmbeddedResource>
-    <EmbeddedResource Include="..\Shared\Strings.shared.resx">
+
+    <EmbeddedResource Include="..\Shared\Resources\Strings.shared.resx">
       <Link>Resources\Strings.shared.resx</Link>
       <SubType>Designer</SubType>
-      <LogicalName>$(AssemblyName).Resources.Strings.shared.resources</LogicalName>
+      <LogicalName>$(AssemblyName).Strings.shared.resources</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup Condition="'$(NetCoreBuild)' != 'true'">
@@ -730,6 +744,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Evaluation\LazyItemEvaluator.EvaluatorData.cs" />
     <None Include="project.json" />
   </ItemGroup>
   <!--

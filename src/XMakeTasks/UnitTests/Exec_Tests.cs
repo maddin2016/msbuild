@@ -9,6 +9,7 @@ using Microsoft.Build.Tasks;
 using Microsoft.Build.Utilities;
 using Microsoft.Build.Shared;
 using Xunit;
+using PlatformID = Xunit.PlatformID;
 
 namespace Microsoft.Build.UnitTests
 {
@@ -78,7 +79,8 @@ namespace Microsoft.Build.UnitTests
             }
         }
 
-        [Fact(Skip = "Timing issue found on RI candidate from ToolPlat to Main, disabling for RI only.")]
+        [Fact]
+        [PlatformSpecific(PlatformID.Windows)] // TODO: https://github.com/Microsoft/msbuild/issues/434
         public void Timeout()
         {
             Exec exec = PrepareExec(NativeMethodsShared.IsWindows ? ":foo \n goto foo" : "while true; do sleep 1; done");
@@ -89,7 +91,9 @@ namespace Microsoft.Build.UnitTests
             Assert.Equal(-1, exec.ExitCode);
             ((MockEngine)exec.BuildEngine).AssertLogContains("MSB5002");
             Assert.Equal(1, ((MockEngine)exec.BuildEngine).Warnings);
-            Assert.Equal(1, ((MockEngine)exec.BuildEngine).Errors);
+
+            // ToolTask does not log an error on timeout.
+            Assert.Equal(0, ((MockEngine)exec.BuildEngine).Errors);
         }
 
         [Fact]
@@ -319,7 +323,11 @@ namespace Microsoft.Build.UnitTests
         /// <summary>
         /// Tests that Exec still executes properly when there's a non-ANSI character in the command
         /// </summary>
+#if RUNTIME_TYPE_NETCORE
         [Fact(Skip = "https://github.com/Microsoft/msbuild/issues/623")]
+#else
+        [Fact]
+#endif
         public void ExecTaskUnicodeCharacterInCommand()
         {
             RunExec(true, new UTF8Encoding(false).EncodingName);
@@ -337,7 +345,11 @@ namespace Microsoft.Build.UnitTests
         /// <summary>
         /// Exec task will use UTF8 when UTF8 Always is specified (with non-ANSI characters in the Command)
         /// </summary>
+#if RUNTIME_TYPE_NETCORE
         [Fact(Skip = "https://github.com/Microsoft/msbuild/issues/623")]
+#else
+        [Fact]
+#endif
         public void ExecTaskUtf8AlwaysWithNonAnsi()
         {
             RunExec(true, new UTF8Encoding(false).EncodingName, "Always");
@@ -356,7 +368,11 @@ namespace Microsoft.Build.UnitTests
         /// Exec task will NOT use UTF8 when UTF8 Never is specified and non-ANSI characters are in the Command
         /// <remarks>Exec task will fail as the cmd processor will not be able to run the command.</remarks>
         /// </summary>
+#if RUNTIME_TYPE_NETCORE
         [Fact(Skip = "https://github.com/Microsoft/msbuild/issues/623")]
+#else
+        [Fact]
+#endif
         public void ExecTaskUtf8NeverWithNonAnsi()
         {
             RunExec(true, EncodingUtilities.CurrentSystemOemEncoding.EncodingName, "Never", false);
@@ -733,7 +749,11 @@ namespace Microsoft.Build.UnitTests
         /// Test the CanEncode method with and without ANSI characters to determine if they can be encoded 
         /// in the current system encoding.
         /// </summary>
+#if RUNTIME_TYPE_NETCORE
         [Fact(Skip = "https://github.com/Microsoft/msbuild/issues/623")]
+#else
+        [Fact]
+#endif
         public void CanEncodeTest()
         {
             var defaultEncoding = EncodingUtilities.CurrentSystemOemEncoding;

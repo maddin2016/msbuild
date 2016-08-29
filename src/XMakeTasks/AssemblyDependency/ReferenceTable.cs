@@ -313,7 +313,8 @@ namespace Microsoft.Build.Tasks
                     installedAssemblies,
                     getRuntimeVersion,
                     targetedRuntimeVersion,
-                    getAssemblyPathInGac
+                    getAssemblyPathInGac,
+                    log
                 );
         }
 
@@ -643,10 +644,8 @@ namespace Microsoft.Build.Tasks
                 // Managed assembly was found but could not be loaded.
                 reference.AddError(new BadImageReferenceException(e.Message, e));
             }
-            catch (Exception e) // Catching Exception, but rethrowing unless it's an IO related exception.
+            catch (Exception e) when (ExceptionHandling.IsIoRelatedException(e))
             {
-                if (ExceptionHandling.NotExpectedException(e))
-                    throw;
                 reference.AddError(new BadImageReferenceException(e.Message, e));
             }
 
@@ -857,12 +856,8 @@ namespace Microsoft.Build.Tasks
 
                 AddReference(assemblyName, reference);
             }
-            catch (Exception e) // Catching Exception, but rethrowing unless it's an IO related exception.
+            catch (Exception e) when (ExceptionHandling.IsIoRelatedException(e))
             {
-                if (ExceptionHandling.NotExpectedException(e))
-                    throw;
-
-                // Invalid file path. 
                 throw new InvalidParameterValueException("AssemblyFiles", referenceAssemblyFile.ItemSpec, e.Message);
             }
         }
@@ -945,13 +940,8 @@ namespace Microsoft.Build.Tasks
                     }
                 }
             }
-            catch (Exception e)
+            catch (Exception e) when (ExceptionHandling.IsIoRelatedException(e))
             {
-                if (ExceptionHandling.NotExpectedException(e))
-                {
-                    throw;
-                }
-
                 if (_log != null)
                 {
                     _log.LogErrorFromResources("ResolveAssemblyReference.ProblemFindingSatelliteAssemblies", reference.FullPath, e.Message);
@@ -1214,11 +1204,8 @@ namespace Microsoft.Build.Tasks
             {
                 reference.AddError(new DependencyResolutionException(e.Message, e));
             }
-            catch (Exception e) // Catching Exception, but rethrowing unless it's an IO related exception.
+            catch (Exception e) when (ExceptionHandling.IsIoRelatedException(e))
             {
-                if (ExceptionHandling.NotExpectedException(e))
-                    throw;
-
                 reference.AddError(new DependencyResolutionException(e.Message, e));
             }
         }

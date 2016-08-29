@@ -15,6 +15,8 @@ using System.Threading;
 using System.Reflection;
 using Microsoft.Win32.SafeHandles;
 
+using FILETIME = System.Runtime.InteropServices.ComTypes.FILETIME;
+
 namespace Microsoft.Build.Shared
 {
     /// <summary>
@@ -224,7 +226,11 @@ namespace Microsoft.Build.Shared
             /// </summary>
             public MemoryStatus()
             {
-                _length = (uint)Marshal.SizeOf<NativeMethodsShared.MemoryStatus>();
+#if (CLR2COMPATIBILITY)
+            _length = (uint)Marshal.SizeOf(typeof(NativeMethodsShared.MemoryStatus));
+#else
+            _length = (uint)Marshal.SizeOf<NativeMethodsShared.MemoryStatus>();
+#endif
             }
 
             /// <summary>
@@ -319,7 +325,11 @@ namespace Microsoft.Build.Shared
         {
             public SecurityAttributes()
             {
-                _nLength = (uint)Marshal.SizeOf<NativeMethodsShared.SecurityAttributes>();
+#if (CLR2COMPATIBILITY)
+            _nLength = (uint)Marshal.SizeOf(typeof(NativeMethodsShared.SecurityAttributes));
+#else
+            _nLength = (uint)Marshal.SizeOf<NativeMethodsShared.SecurityAttributes>();
+#endif
             }
 
             private uint _nLength;
@@ -603,17 +613,42 @@ namespace Microsoft.Build.Shared
         /// <summary>
         /// System information, initialized when required.
         /// </summary>
-        private static readonly Lazy<SystemInformationData> SystemInformation = new Lazy<SystemInformationData>(true);
+        /// <remarks>
+        /// Initially implemented as <see cref="Lazy{SystemInformationData}"/>, but
+        /// that's .NET 4+, and this is used in MSBuildTaskHost.
+        /// </remarks>
+        private static SystemInformationData SystemInformation
+        {
+            get
+            {
+                if (!_systemInformationInitialized)
+                {
+                    lock (SystemInformationLock)
+                    {
+                        if (!_systemInformationInitialized)
+                        {
+                            _systemInformation = new SystemInformationData();
+                            _systemInformationInitialized = true;
+                        }
+                    }
+                }
+                return _systemInformation;
+            }
+        }
+
+        private static SystemInformationData _systemInformation;
+        private static bool _systemInformationInitialized;
+        private static readonly object SystemInformationLock = new object();
 
         /// <summary>
         /// Architecture getter
         /// </summary>
-        internal static ProcessorArchitectures ProcessorArchitecture => SystemInformation.Value.ProcessorArchitectureType;
+        internal static ProcessorArchitectures ProcessorArchitecture => SystemInformation.ProcessorArchitectureType;
 
         /// <summary>
         /// Native architecture getter
         /// </summary>
-        internal static ProcessorArchitectures ProcessorArchitectureNative => SystemInformation.Value.ProcessorArchitectureTypeNative;
+        internal static ProcessorArchitectures ProcessorArchitectureNative => SystemInformation.ProcessorArchitectureTypeNative;
 
         #endregion
 
@@ -799,6 +834,8 @@ namespace Microsoft.Build.Shared
             return null;
         }
 
+        private static readonly bool UseSymlinkTimeInsteadOfTargetTime = Environment.GetEnvironmentVariable("MSBUILDUSESYMLINKTIMESTAMP") == "1";
+
         /// <summary>
         /// Get the last write time of the fullpath to the file. 
         /// If the file does not exist, then DateTime.MinValue is returned
@@ -810,14 +847,36 @@ namespace Microsoft.Build.Shared
             DateTime fileModifiedTime = DateTime.MinValue;
             if (IsWindows)
             {
-                WIN32_FILE_ATTRIBUTE_DATA data = new WIN32_FILE_ATTRIBUTE_DATA();
-                bool success = false;
-
-                success = NativeMethodsShared.GetFileAttributesEx(fullPath, 0, ref data);
-                if (success)
+                if (UseSymlinkTimeInsteadOfTargetTime)
                 {
-                    long dt = ((long)(data.ftLastWriteTimeHigh) << 32) | ((long)data.ftLastWriteTimeLow);
-                    fileModifiedTime = DateTime.FromFileTimeUtc(dt);
+                    WIN32_FILE_ATTRIBUTE_DATA data = new WIN32_FILE_ATTRIBUTE_DATA();
+                    bool success = false;
+
+                    success = NativeMethodsShared.GetFileAttributesEx(fullPath, 0, ref data);
+                    if (success)
+                    {
+                        long dt = ((long) (data.ftLastWriteTimeHigh) << 32) | ((long) data.ftLastWriteTimeLow);
+                        fileModifiedTime = DateTime.FromFileTimeUtc(dt);
+                    }
+                }
+                else
+                {
+                    using (SafeFileHandle handle =
+                        CreateFile(fullPath, GENERIC_READ, FILE_SHARE_READ, IntPtr.Zero, OPEN_EXISTING,
+                            FILE_ATTRIBUTE_NORMAL, IntPtr.Zero))
+                    {
+                        if (!handle.IsInvalid)
+                        {
+                            FILETIME ftCreationTime, ftLastAccessTime, ftLastWriteTime;
+                            if (!GetFileTime(handle, out ftCreationTime, out ftLastAccessTime, out ftLastWriteTime) != true)
+                            {
+                                long fileTime = ((long) (uint) ftLastWriteTime.dwHighDateTime) << 32 |
+                                                (long) (uint) ftLastWriteTime.dwLowDateTime;
+                                fileModifiedTime =
+                                    DateTime.FromFileTimeUtc(fileTime);
+                            }
+                        }
+                    }
                 }
             }
             else if (File.Exists(fullPath))
@@ -1017,6 +1076,7 @@ namespace Microsoft.Build.Shared
         internal static int GetParentProcessId(int processId)
         {
             int ParentID = 0;
+#if !CLR2COMPATIBILITY
             if (IsUnixLike)
             {
                 string line = null;
@@ -1046,6 +1106,7 @@ namespace Microsoft.Build.Shared
                 }
             }
             else
+#endif
             {
                 SafeProcessHandle hProcess = OpenProcess(eDesiredAccess.PROCESS_QUERY_INFORMATION, false, processId);
 
@@ -1290,6 +1351,32 @@ namespace Microsoft.Build.Shared
         [DllImport("ole32.dll")]
         public static extern int CoWaitForMultipleHandles(COWAIT_FLAGS dwFlags, int dwTimeout, int cHandles, [MarshalAs(UnmanagedType.LPArray)] IntPtr[] pHandles, out int pdwIndex);
 
+        internal const uint GENERIC_READ = 0x80000000;
+        internal const uint FILE_SHARE_READ = 0x1;
+        internal const uint FILE_ATTRIBUTE_NORMAL = 0x80;
+        internal const uint FILE_FLAG_OPEN_REPARSE_POINT = 0x00200000;
+        internal const uint OPEN_EXISTING = 3;
+
+        [DllImport("kernel32.dll", CharSet = AutoOrUnicode, CallingConvention = CallingConvention.StdCall,
+            SetLastError = true)]
+        internal static extern SafeFileHandle CreateFile(
+            string lpFileName,
+            uint dwDesiredAccess,
+            uint dwShareMode,
+            IntPtr lpSecurityAttributes,
+            uint dwCreationDisposition,
+            uint dwFlagsAndAttributes,
+            IntPtr hTemplateFile
+            );
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        internal static extern bool GetFileTime(
+            SafeFileHandle hFile,
+            out FILETIME lpCreationTime,
+            out FILETIME lpLastAccessTime,
+            out FILETIME lpLastWriteTime
+            );
+
         #endregion
 
         #region Extensions
@@ -1334,6 +1421,6 @@ namespace Microsoft.Build.Shared
             return returnValue == 0;
         }
 
-        #endregion
+#endregion
     }
 }

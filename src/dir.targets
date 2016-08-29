@@ -28,18 +28,19 @@
   <Import Condition="Exists('$(ToolsDir)\sign.targets')" Project="$(ToolsDir)\sign.targets" />
   
   <Import Project="$(MicroBuildDir)\MicroBuild.Core.targets" Condition="Exists('$(MicroBuildDir)\MicroBuild.Core.targets')" />
-  
-  <!-- nuget targets -->
-  <Import Condition="Exists('$(ToolsDir)\packageresolve.targets')" Project="$(ToolsDir)\packageresolve.targets" />
 
+    <!-- Targets from buildtools that restore packages before building. -->
+  <!-- TODO: ideally replaced by a standard "dotnet restore" over the solution. -->
+  <Import Condition="Exists('$(ToolsDir)\packageresolve.targets')" Project="$(ToolsDir)\packageresolve.targets" />
+  
   <!-- Use NuSpec.ReferenceGenerator to create / update the .NET Core dependencies of the packages -->
   <Import Condition="'$(NetCoreBuild)'=='true' and Exists('$(NuSpecReferenceGeneratorDir)\NuSpec.ReferenceGenerator.targets')"  Project="$(NuSpecReferenceGeneratorDir)\NuSpec.ReferenceGenerator.targets"/>
 
   <!-- Debugging support -->
   <PropertyGroup Condition="'$(NetCoreBuild)' == 'true'">
     <DebugEngines>{2E36F1D4-B23C-435D-AB41-18E608940038}</DebugEngines>
-    <TestHost Condition="'$(OsEnvironment)' == 'Windows_NT'">CoreRun.exe</TestHost>
-    <TestHost Condition="'$(OsEnvironment)' != 'Windows_NT'">corerun</TestHost>
+    <TestHost Condition="'$(OsEnvironment)' == 'Windows_NT'">dotnet.exe</TestHost>
+    <TestHost Condition="'$(OsEnvironment)' != 'Windows_NT'">dotnet</TestHost>
     <StartProgram Condition="'$(StartProgram)'==''">$(DeploymentDir)\$(TestHost)</StartProgram>
     <StartArguments>msbuild.exe</StartArguments>
   </PropertyGroup>
@@ -50,8 +51,15 @@
     <StartAction>Program</StartAction>
   </PropertyGroup>
 
-  <Import Project="$(ToolPackagesDir)\Nerdbank.GitVersioning\1.4.19\build\dotnet\Nerdbank.GitVersioning.targets"
-          Condition="'$(MSBuildRuntimeType)' != 'Core'" />
+  <!-- TODO: enable for all runtime hosts https://github.com/Microsoft/msbuild/issues/694 -->
+  <Import Project="$(GitVersioningDir)dotnet\Nerdbank.GitVersioning.targets"
+          Condition="'$(MSBuildRuntimeType)' == 'Desktop'" />
+  <PropertyGroup Condition="'$(MSBuildRuntimeType)' != 'Desktop'">
+    <DefineConstants>$(DefineConstants);STATIC_VERSION_NUMBER</DefineConstants>
+  </PropertyGroup>
+
+  <!-- Update localized resources from the default English ones-->
+  <Import Project="UpdateLocalizedResources.targets" Condition="'$(LocalizedBuild)' == 'true' and '$(IsTestProject)' != 'true' and '$(DoNotLocalizeProject)' != 'true'"/>
 
   <!-- Restore packages -->
   <PropertyGroup>

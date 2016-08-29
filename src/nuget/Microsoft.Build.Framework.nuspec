@@ -2,7 +2,7 @@
 <package>
   <metadata minClientVersion="2.8.1">
     <id>Microsoft.Build.Framework</id>
-    <version>0.1.0-preview</version>
+    <version>$version$</version>
     <title>MSBuild APIs</title>
     <authors>Microsoft</authors>
     <owners>Microsoft</owners>
@@ -17,13 +17,13 @@
     <copyright>Copyright © Microsoft Corporation</copyright>
     <dependencies>
       <group targetFramework="netstandard1.3">
-        <dependency id="System.Collections" version="4.0.11-rc3-24109-00" />
-        <dependency id="System.Diagnostics.Debug" version="4.0.11-rc3-24109-00" />
-        <dependency id="System.Globalization" version="4.0.11-rc3-24109-00" />
-        <dependency id="System.Runtime" version="4.1.0-rc3-24109-00" />
-        <dependency id="System.Runtime.InteropServices" version="4.1.0-rc3-24109-00" />
-        <dependency id="System.Threading" version="4.0.11-rc3-24109-00" />
-        <dependency id="System.Threading.Thread" version="4.0.0-rc3-24109-00" />
+        <dependency id="System.Collections" version="4.0.11" />
+        <dependency id="System.Diagnostics.Debug" version="4.0.11" />
+        <dependency id="System.Globalization" version="4.0.11" />
+        <dependency id="System.Runtime" version="4.1.0" />
+        <dependency id="System.Runtime.InteropServices" version="4.1.0" />
+        <dependency id="System.Threading" version="4.0.11" />
+        <dependency id="System.Threading.Thread" version="4.0.0" />
       </group>
     </dependencies>
   </metadata>
